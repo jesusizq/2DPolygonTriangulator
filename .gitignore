@@ -1,0 +1,23 @@
+# Docker
+.env
+.env.local
+docker-compose.override.yml
+
+# Build artifacts
+build/
+dist/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp 
