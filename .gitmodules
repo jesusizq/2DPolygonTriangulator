@@ -1,0 +1,6 @@
+[submodule "frontend"]
+	path = frontend
+	url = git@github.com:jesusizq/3dProcessor-frontend.git
+[submodule "mesh-processor"]
+	path = mesh-processor
+	url = git@github.com:jesusizq/mesh-processor.git
