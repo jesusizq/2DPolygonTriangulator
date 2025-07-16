@@ -6,7 +6,6 @@ SHELL := /bin/bash
 # Project configuration
 PROJECT_NAME := 3d-processor
 COMPOSE_COMMAND := docker compose
-ENV_FILE_ARG := --env-file config/env.development
 MESH_PROCESSOR_PORT := 8080
 FRONTEND_PORT := 3000
 
@@ -15,19 +14,26 @@ service ?= all
 
 # Environment selection (dev, prod, test)
 env ?= development
-ifeq ($(env),production)
-    ENV_FILE_ARG := --env-file config/env.production
-else ifeq ($(env),test)
-    ENV_FILE_ARG := --env-file config/env.test
+
+# Check if .env exists, otherwise use environment-specific files
+ifeq ($(wildcard .env),)
+    # .env doesn't exist, use environment-specific files
+    ifeq ($(env),production)
+        ENV_FILE_ARG := --env-file .env.production
+    else ifeq ($(env),test)
+        ENV_FILE_ARG := --env-file .env.test
+    else
+        ENV_FILE_ARG := --env-file .env.development
+    endif
 else
-    ENV_FILE_ARG := --env-file config/env.development
+    # .env exists, use it
+    ENV_FILE_ARG := --env-file .env
 endif
 
-.PHONY: help setup build up down clean logs exec test build-test test-rebuild health status dev-up
+.PHONY: help build up down clean logs exec test build-test test-rebuild health status dev-up
 
 help:
 	@echo "Available Commands:"
-	@echo "  setup              : Initial project setup (copy env files)"
 	@echo "  build [env=<env>]  : Build all Docker images (default: development)"
 	@echo "  up [env=<env>]     : Start all services (default: development)"
 	@echo "  down [env=<env>]   : Stop all services"
@@ -48,17 +54,6 @@ help:
 	@echo "  make up env=production    # Start in production mode"
 	@echo "  make logs service=mesh-processor"
 	@echo "  make exec service=mesh-processor cmd=\"ls -la\""
-
-setup:
-	@echo "Setting up 3D Processor project..."
-	@mkdir -p .env-files
-	@if [ ! -f .env ]; then \
-		cp config/env.development .env; \
-		echo "✓ Created .env from development template"; \
-	else \
-		echo "ℹ .env already exists"; \
-	fi
-	@echo "✓ Project setup complete"
 
 build:
 	@echo "Building images for environment: $(env)..."

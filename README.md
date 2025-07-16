@@ -83,9 +83,9 @@ That's it! The application will be available at:
 
 You would usually not commit this adding it to the .gitignore file. We've added it to the project for the reviewer's convenience.
 
-### 2. Build and Run
+Hence don't have to do nothing here.
 
-#### Option A: Using Make (Recommended)
+### 2. Build and Run (using Make)
 
 ```bash
 # Build all services
@@ -94,9 +94,6 @@ make build
 # Start all services
 make up
 
-# Start in development mode (with hot reload)
-make dev-up
-
 # Check service health
 make health
 
@@ -104,25 +101,6 @@ make health
 make logs
 make logs service=mesh-processor
 make logs service=frontend
-```
-
-#### Option B: Using run.sh Script
-
-```bash
-# Make script executable (if needed)
-chmod +x scripts/run.sh
-
-# Start all services
-./scripts/run.sh -d up
-
-# Start specific service
-./scripts/run.sh -n mesh-processor up
-
-# Start in production environment
-./scripts/run.sh -e production -d up
-
-# Check health
-./scripts/run.sh health
 ```
 
 #### Option C: Direct Docker Compose
