@@ -18,7 +18,7 @@ The system consists of three main components working together:
 **Frontend Service (WebGL + Nginx)**
 
 - Interactive web application for polygon drawing and visualization
-- Built with vanilla JavaScript and WebGL for 3D rendering
+- Built with JavaScript and WebGL for rendering
 - Serves static files via Nginx in production
 - Supports dual triangulation modes: client-side (WASM) and server-side (API)
 
@@ -33,7 +33,7 @@ The system consists of three main components working together:
 
 - Core triangulation logic using Mapbox's Delaunay implementation
 - Available in two forms:
-  - **Native C++**: Statically linked into the mesh processor service
+  - **Native C++**: in the mesh processor service
   - **WebAssembly**: Compiled with Emscripten for client-side processing
 
 **Communication Flow:**
@@ -81,13 +81,7 @@ That's it! The application will be available at:
 
 ### 1. Environment Setup
 
-```bash
-# Copy environment configuration
-make setup
-
-# Or manually:
-cp config/env.development .env
-```
+You would usually not commit this adding it to the .gitignore file. We've added it to the project for the reviewer's convenience.
 
 ### 2. Build and Run
 
