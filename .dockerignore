@@ -1,0 +1,57 @@
+# Build directories
+**/build/
+**/build_*/
+**/dist/
+**/out/
+
+# Node modules
+**/node_modules/
+**/npm-debug.log*
+
+# Environment files
+**/.env
+**/.env.*
+
+# IDE files
+**/.vscode/
+**/.idea/
+**/*.swp
+**/*.swo
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Git directories
+**/.git/
+**/.gitignore
+
+# Documentation
+**/README.md
+**/docs/
+
+# Test files
+**/test/
+**/*_test.cpp
+**/*Test.cpp
+
+# Log files
+**/*.log
+
+# Cache directories
+**/.cache/
+**/tmp/
+**/temp/
+
+# CMake generated files
+**/CMakeCache.txt
+**/CMakeFiles/
+**/cmake_install.cmake
+
+# Compiled objects
+**/*.o
+**/*.obj
+**/*.a
+**/*.so
+**/*.dylib
+**/*.dll 

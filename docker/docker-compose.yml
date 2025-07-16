@@ -1,0 +1,49 @@
+name: "3d-processor"
+
+services:
+  # Mesh Processor Service - C++ Microservice for triangulation
+  mesh-processor:
+    build:
+      context: ../mesh-processor
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: mesh_processor
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  # Frontend Service - Simple HTTP server serving WebGL application with WASM
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      mesh-processor:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
