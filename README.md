@@ -31,7 +31,7 @@ The system consists of three main components working together:
 
 **libtriangulation Library (Shared Core)**
 
-- Core triangulation logic using Mapbox's Delaunay implementation
+- Core triangulation logic
 - Available in two forms:
   - **Native C++**: in the mesh processor service
   - **WebAssembly**: Compiled with Emscripten for client-side processing
@@ -68,7 +68,7 @@ The system consists of three main components working together:
 ```bash
 # Clone and start everything
 git clone <repository-url>
-cd 3D_Processor/3DProcessor
+cd 3DProcessor
 make build && make up
 ```
 
@@ -76,6 +76,16 @@ That's it! The application will be available at:
 
 - **Frontend**: http://localhost:3000
 - **API**: http://localhost:8080
+
+### Troubleshooting
+
+You may encounter submodules issues, if so, manually run:
+
+```bash
+git submodule update --init --recursive --remote
+```
+
+And then, run `make build && make up` again.
 
 ## Detailed Instructions
 
@@ -90,14 +100,11 @@ The build process automatically handles:
 - WASM compilation
 - Docker image building
 
-### 2. Build and Run (using Make)
+### 2. Helpful make commands
 
 ```bash
-# Build all services
-make build
-
-# Start all services
-make up
+# Build and start all services
+make build && make up
 
 # Check service health
 make health
@@ -106,60 +113,9 @@ make health
 make logs
 make logs service=mesh-processor
 make logs service=frontend
-```
 
-#### Option C: Direct Docker Compose
-
-```bash
-# Start services
-docker compose --env-file config/env.development up -d
-
-# Check status
-docker compose ps
-
-# View logs
-docker compose logs -f
-```
-
-### 3. Development Workflow
-
-#### Frontend Development
-
-```bash
-# Start backend only
-make mesh-processor-up
-
-# For local development, you can also use npm directly
-cd frontend && npm install && npm start
-
-# Access at http://localhost:8000 (local) or http://localhost:3000 (Docker)
-```
-
-#### Backend Development
-
-```bash
-# Rebuild and restart mesh-processor
-make build-mesh-processor
-make mesh-processor-up
-
-# View logs
-make mesh-processor-logs
-
-# Execute commands in container
-make exec service=mesh-processor cmd="bash"
-```
-
-#### WASM Development
-
-```bash
-# Rebuild WASM module manually
-make build-wasm
-
-# Or rebuild entire frontend with WASM
-make build-frontend
-
-# Or use npm script directly
-cd frontend && npm run build:wasm
+# help
+make help
 ```
 
 ## Testing
@@ -175,66 +131,6 @@ Runs the C++ unit tests using GoogleTest in a clean Docker environment. This com
 #### Test Commands
 
 - **`make test`** - Run tests (builds test image if not exists) - Fast for repeated runs
-- **`make build-test`** - Build test Docker image only
-- **`make test-rebuild`** - Force rebuild test image and run tests - Use after code changes
-
-#### Workflow
-
-```bash
-# First time or after code changes
-make test-rebuild
-
-# Quick test reruns (uses cached image)
-make test
-
-# Just build test environment
-make build-test
-```
-
-### Manual Testing
-
-```bash
-# Test mesh-processor API
-curl -X POST http://localhost:8080/triangulate \
-  -H "Content-Type: application/json" \
-  -d '[[0,0],[1,0],[0.5,1]]'
-
-# Test health endpoint
-curl http://localhost:8080/health
-
-# Test frontend
-curl http://localhost:3000/
-```
-
-## Environment Configuration
-
-The project supports multiple environments with different configurations:
-
-### Development (Default)
-
-- **Frontend**: http://localhost:3000
-- **API**: http://localhost:8080
-- **Features**: Debug logging, CORS enabled, development WASM
-
-### Production
-
-```bash
-make up env=production
-```
-
-- **Frontend**: http://localhost:3000
-- **API**: http://localhost:8080
-- **Features**: Optimized builds, compressed assets, production WASM
-
-### Test
-
-```bash
-make up env=test
-```
-
-- **Frontend**: http://localhost:3001
-- **API**: http://localhost:8081
-- **Features**: Test-specific configurations, debug logging
 
 ## Using the Application
 
@@ -243,7 +139,7 @@ make up env=test
 1. Open the frontend in your browser
 2. Click on the left canvas to draw a polygon
 3. Complete the polygon by clicking near the first point
-4. Click "Triangulate" to see the result
+4. Click "Triangulate" buttons to see the result
 
 ### 2. File Upload
 
@@ -264,20 +160,6 @@ make up env=test
 - **Backend**: Uses the C++ microservice (network call)
 - **WASM**: Uses client-side WebAssembly (faster, offline capable)
 
-### 4. Interaction
-
-- **Zoom**: Mouse wheel
-- **Pan**: Right-click and drag
-- **Reset**: Clear button
-
-## Available Commands
-
-### Make Commands
-
-```bash
-make help                    # Show all available commands
-```
-
 ## License
 
 This project is created for evaluation purposes. See individual component READMEs for specific licensing information.
@@ -285,3 +167,6 @@ This project is created for evaluation purposes. See individual component README
 ## Author
 
 **Jesús Izquierdo**
+
+- **LinkedIn**: [linkedin.com/in/jesus-izquierdo-cubas/](https://www.linkedin.com/in/jesus-izquierdo-cubas/)
+- **GitHub**: [github.com/jesusizq](https://github.com/jesusizq)
