@@ -15,11 +15,11 @@ This project demonstrates a scalable, modular approach to geometric processing w
 
 The system consists of three main components working together:
 
-**Frontend Service (WebGL + Nginx)**
+**Frontend Service (WebGL + HTTP Server)**
 
 - Interactive web application for polygon drawing and visualization
 - Built with JavaScript and WebGL for rendering
-- Serves static files via Nginx in production
+- Serves static files via simple HTTP server
 - Supports dual triangulation modes: client-side (WASM) and server-side (API)
 
 **Mesh Processor Service (C++ Microservice)**
@@ -49,7 +49,7 @@ The system consists of three main components working together:
 | -------------- | -------------------------------- |
 | Backend API    | C++17, CMake, cpp-httplib        |
 | Core Algorithm | Ear Clipping (mapbox/earcut.hpp) |
-| Frontend       | WebGL, ES6 Modules, Nginx        |
+| Frontend       | WebGL, ES6 Modules, http-server  |
 | WebAssembly    | Emscripten, embind               |
 | Container      | Docker, Docker Compose           |
 | Build System   | CMake, Make, Shell Scripts       |
@@ -68,8 +68,8 @@ The system consists of three main components working together:
 ```bash
 # Clone and start everything
 git clone <repository-url>
-cd 3D_Processor
-make setup && make up
+cd 3D_Processor/3DProcessor
+make build && make up
 ```
 
 That's it! The application will be available at:
@@ -81,9 +81,14 @@ That's it! The application will be available at:
 
 ### 1. Environment Setup
 
-You would usually not commit this adding it to the .gitignore file. We've added it to the project for the reviewer's convenience.
+The project includes a `.env` file for development configuration. You would usually not commit this, adding it to `.gitignore`, but we've included it for the reviewer's convenience.
 
-Hence don't have to do nothing here.
+The build process automatically handles:
+
+- Git submodule initialization
+- npm dependency installation
+- WASM compilation
+- Docker image building
 
 ### 2. Build and Run (using Make)
 
@@ -124,10 +129,10 @@ docker compose logs -f
 # Start backend only
 make mesh-processor-up
 
-# Start development frontend (hot reload)
-make dev-up
+# For local development, you can also use npm directly
+cd frontend && npm install && npm start
 
-# Access at http://localhost:8000
+# Access at http://localhost:8000 (local) or http://localhost:3000 (Docker)
 ```
 
 #### Backend Development
@@ -148,10 +153,13 @@ make exec service=mesh-processor cmd="bash"
 
 ```bash
 # Rebuild WASM module manually
-make wasm-build
+make build-wasm
 
 # Or rebuild entire frontend with WASM
 make build-frontend
+
+# Or use npm script directly
+cd frontend && npm run build:wasm
 ```
 
 ## Testing
@@ -205,7 +213,6 @@ The project supports multiple environments with different configurations:
 ### Development (Default)
 
 - **Frontend**: http://localhost:3000
-- **Dev Frontend**: http://localhost:8000 (hot reload)
 - **API**: http://localhost:8080
 - **Features**: Debug logging, CORS enabled, development WASM
 
@@ -213,11 +220,9 @@ The project supports multiple environments with different configurations:
 
 ```bash
 make up env=production
-# or
-./scripts/run.sh -e production up
 ```
 
-- **Frontend**: http://localhost:80
+- **Frontend**: http://localhost:3000
 - **API**: http://localhost:8080
 - **Features**: Optimized builds, compressed assets, production WASM
 
@@ -271,85 +276,7 @@ make up env=test
 
 ```bash
 make help                    # Show all available commands
-make setup                   # Initial setup
-make build [env=<env>]       # Build images
-make up [env=<env>]          # Start services
-make dev-up                  # Development mode
-make down [env=<env>]        # Stop services
-make clean                   # Remove all containers/images
-make test                    # Run tests
-make health                  # Check service health
-make logs [service=<name>]   # View logs
 ```
-
-### Script Commands
-
-```bash
-./scripts/run.sh --help      # Show script help
-./scripts/run.sh up          # Start all services
-./scripts/run.sh -n <service> up  # Start specific service
-./scripts/run.sh -e <env> up # Start in specific environment
-./scripts/run.sh health      # Check health
-./scripts/run.sh logs        # View logs
-```
-
-## Algorithm Choice: Ear Clipping
-
-This project uses the **Ear Clipping** algorithm via `mapbox/earcut.hpp` for triangulation.
-
-### Why Ear Clipping?
-
-**Advantages:**
-
-- **Simple & Fast**: Optimal for simple polygons without holes
-- **Lightweight**: Header-only library, easy integration
-- **Reliable**: Battle-tested implementation from Mapbox
-- **Cross-platform**: Works in both C++ and WebAssembly
-
-**Comparison with Delaunay Triangulation:**
-
-- **Delaunay**: Better triangle quality, handles complex inputs
-- **Ear Clipping**: Faster for simple polygons, smaller footprint
-- **Choice**: For this demo's requirements, ear clipping provides the best balance
-
-## Performance & Scalability
-
-### Current Performance
-
-- **WASM**: < 1ms for simple polygons, runs in browser
-- **Backend**: < 10ms including network latency
-- **Frontend**: 60fps WebGL rendering
-
-### Scalability Features
-
-- **Containerized**: Easy horizontal scaling
-- **Stateless**: Each service can be replicated
-- **Modular**: Components can be deployed independently
-- **WASM Fallback**: Reduces server load
-
-### Future Enhancements
-
-- Load balancing for mesh-processor
-- Redis caching for frequent triangulations
-- WebWorkers for complex WASM computations
-- Multiple triangulation algorithms
-
-## Contributing
-
-### Development Setup
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Make changes and test: `make test`
-4. Commit: `git commit -m 'Add amazing feature'`
-5. Push: `git push origin feature/amazing-feature`
-6. Create Pull Request
-
-### Code Style
-
-- **C++**: Follow Google C++ Style Guide
-- **JavaScript**: ES6 modules, functional style
-- **Docker**: Multi-stage builds, security best practices
 
 ## License
 

@@ -5,7 +5,7 @@ SHELL := /bin/bash
 
 # Project configuration
 PROJECT_NAME := 3d-processor
-COMPOSE_COMMAND := docker compose
+COMPOSE_COMMAND := docker compose -f docker/docker-compose.yml
 MESH_PROCESSOR_PORT := 8080
 FRONTEND_PORT := 3000
 
@@ -30,7 +30,7 @@ else
     ENV_FILE_ARG := --env-file .env
 endif
 
-.PHONY: help build up down clean logs exec test build-test test-rebuild health status dev-up
+.PHONY: help build up down clean logs exec test build-test test-rebuild health status dev-up init-submodules install-deps build-wasm
 
 help:
 	@echo "Available Commands:"
@@ -46,6 +46,9 @@ help:
 	@echo "  test-rebuild       : Force rebuild test image and run tests"
 	@echo "  health             : Check health status of all services"
 	@echo "  status             : Show status of all services"
+	@echo "  init-submodules    : Initialize git submodules if not present"
+	@echo "  install-deps       : Install npm dependencies for frontend"
+	@echo "  build-wasm         : Build WASM module for frontend"
 	@echo ""
 	@echo "Services: mesh-processor, frontend"
 	@echo "Environments: development (default), production, test"
@@ -55,7 +58,25 @@ help:
 	@echo "  make logs service=mesh-processor"
 	@echo "  make exec service=mesh-processor cmd=\"ls -la\""
 
-build:
+init-submodules:
+	@echo "Updating git submodules recursively..."
+	git submodule update --init --recursive
+
+# Install npm dependencies if not present
+install-deps:
+	@echo "Checking npm dependencies..."
+	@if [ ! -d "frontend/node_modules" ]; then \
+		echo "Installing npm dependencies..."; \
+		cd frontend && npm install; \
+	else \
+		echo "✓ npm dependencies already installed"; \
+	fi
+
+build-wasm: init-submodules install-deps
+	@echo "Building WASM module..."
+	cd frontend && npm run build:wasm
+
+build: init-submodules build-wasm
 	@echo "Building images for environment: $(env)..."
 	$(COMPOSE_COMMAND) $(ENV_FILE_ARG) build --parallel
 	@echo "✓ Build completed"
@@ -160,7 +181,7 @@ build-frontend:
 	$(COMPOSE_COMMAND) $(ENV_FILE_ARG) build frontend
 
 # Development helpers
-wasm-build:
+wasm-build: init-submodules
 	@echo "Building WASM module manually..."
 	cd frontend && ./build-wasm.sh
 	@echo "✓ WASM module built"
