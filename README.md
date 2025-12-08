@@ -1,172 +1,110 @@
-# 3D Processor
+# 🔺 2D Polygon Triangulator (Hybrid C++/WASM)
 
-A comprehensive system for 2D polygon triangulation with both backend and WebAssembly support, featuring a C++ microservice, WebGL frontend, and interactive visualization capabilities.
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-blue.svg?logo=c%2B%2B)
+![WASM](https://img.shields.io/badge/WebAssembly-Enabled-purple?logo=webassembly)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)
+![Google Test](https://img.shields.io/badge/Google%20Test-Enabled-blue?logo=googletest)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-## Project Overview
+<img src="./docs/demo-screenshot.png" alt="Demo Screenshot" width="600" height="auto">
 
-This project demonstrates a scalable, modular approach to geometric processing with the following components:
+**A high-performance geometric processing system demonstrating a hybrid architecture: REST API (C++ Microservice) and Client-side (WebAssembly).**
 
-- **mesh-processor**: High-performance C++ microservice for triangulation using HTTP API
-- **frontend**: WebGL-based interactive client with both backend and WASM triangulation options
-- **libtriangulation**: Reusable C++ library with WebAssembly bindings
-- **Docker Infrastructure**: Complete containerization for easy deployment and development
+## 🚀 Engineering Highlights
 
-## Architecture
+This project demonstrates production-grade C++ development:
 
-The system consists of three main components working together:
+- **Hybrid Compute Architecture**: Seamlessly switches between **Server-side** (native C++ microservice) and **Client-side** (WASM) execution.
+- **WebAssembly Optimization**: Shared C++ core library compiled with **Emscripten/embind** for zero-copy JS interop and offline capability.
+- **High-Performance Algorithms**: Implements the ear-clipping algorithm (via `mapbox/earcut.hpp`) for O(n) triangulation.
+- **Scalable Microservice**: Stateless API design using `cpp-httplib`, containerized with multi-stage Docker builds.
+- **DevOps & Quality**: Automated testing via GoogleTest, structured logging (`spdlog`), and environment-based configuration.
 
-**Frontend Service (WebGL + HTTP Server)**
+## 🏗️ Architecture
 
-- Interactive web application for polygon drawing and visualization
-- Built with JavaScript and WebGL for rendering
-- Serves static files via simple HTTP server
-- Supports dual triangulation modes: client-side (WASM) and server-side (API)
+The system shares a core C++ library (`libtriangulation`) between the backend API and the frontend WASM module.
 
-**Mesh Processor Service (C++ Microservice)**
+```mermaid
+graph TD
+    User[Browser Client]
 
-- RESTful API service built with cpp-httplib
-- Exposes `/triangulate` endpoint for polygon triangulation requests
-- Handles JSON input/output for polygon coordinates and triangle indices
-- Includes health checks and structured logging with spdlog
+    subgraph "Frontend Service (Container)"
+        UI[WebGL / JS UI]
+        WASM["WASM Module <br/> (libtriangulation)"]
+    end
 
-**libtriangulation Library (Shared Core)**
+    subgraph "Backend Service (Container)"
+        API["C++ Microservice <br/> (cpp-httplib)"]
+        Core["Native Lib <br/> (libtriangulation)"]
+    end
 
-- Core triangulation logic
-- Available in two forms:
-  - **Native C++**: in the mesh processor service
-  - **WebAssembly**: Compiled with Emscripten for client-side processing
+    User -->|1. Draw Polygon| UI
+    UI -->|2a. Local Processing| WASM
+    UI -->|2b. HTTP POST /triangulate| API
+    API -->|3. Native Execution| Core
+```
 
-**Communication Flow:**
+## 🛠️ Tech Stack
 
-1. Frontend sends HTTP POST requests to `/triangulate` endpoint
-2. Mesh processor processes polygons using native libtriangulation
-3. Frontend can also process polygons locally using WASM version
-4. Both approaches return triangle indices for WebGL rendering
+| Component          | Technology                    | Role                                  |
+| :----------------- | :---------------------------- | :------------------------------------ |
+| **Backend**        | **C++17**, CMake, cpp-httplib | High-performance triangulation API    |
+| **Frontend**       | WebGL, JavaScript (ES6)       | Interactive visualization & rendering |
+| **Compute**        | **WebAssembly**, Emscripten   | Client-side heavy lifting             |
+| **Algorithm**      | mapbox/earcut.hpp             | Efficient polygon processing          |
+| **Infrastructure** | **Docker**, Docker Compose    | Containerization & orchestration      |
+| **Testing**        | GoogleTest (GTest)            | Unit testing & verification           |
 
-### Technology Stack
+## ⚡ Quick Start
 
-| Component      | Technology                       |
-| -------------- | -------------------------------- |
-| Backend API    | C++17, CMake, cpp-httplib        |
-| Core Algorithm | Ear Clipping (mapbox/earcut.hpp) |
-| Frontend       | WebGL, ES6 Modules, http-server  |
-| WebAssembly    | Emscripten, embind               |
-| Container      | Docker, Docker Compose           |
-| Build System   | CMake, Make, Shell Scripts       |
-
-## Quick Start
-
-### Prerequisites
-
-- **Docker** and **Docker Compose** (required)
-- **Make** (recommended for convenience)
-- **Git** with submodule support
-- **curl** (for health checks)
-
-### One-Command Setup
+Run the entire system with one command. The build process automatically handles git submodules, WASM compilation, and container setup.
 
 ```bash
-# Clone and start everything
-git clone <repository-url>
-cd 3DProcessor
+# Clone with recursive submodules
+git clone --recursive <repository-url>
+cd 2DPolygonTriangulator
+
+# Build and start services
 make build && make up
 ```
 
-That's it! The application will be available at:
+Access the application:
 
-- **Frontend**: http://localhost:3000
-- **API**: http://localhost:8080
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **API Health**: [http://localhost:8080/health](http://localhost:8080/health)
 
-### Troubleshooting
+## 🧪 Testing
 
-You may encounter submodules issues, if so, manually run:
-
-```bash
-git submodule update --init --recursive --remote
-```
-
-And then, run `make build && make up` again.
-
-## Detailed Instructions
-
-### 1. Environment Setup
-
-The project includes a `.env` file for development configuration. You would usually not commit this, adding it to `.gitignore`, but we've included it for the reviewer's convenience.
-
-The build process automatically handles:
-
-- Git submodule initialization
-- npm dependency installation
-- WASM compilation
-- Docker image building
-
-### 2. Helpful make commands
-
-```bash
-# Build and start all services
-make build && make up
-
-# Check service health
-make health
-
-# View logs
-make logs
-make logs service=mesh-processor
-make logs service=frontend
-
-# help
-make help
-```
-
-## Testing
-
-### Run All Tests
+Run unit tests in an isolated Docker environment:
 
 ```bash
 make test
 ```
 
-Runs the C++ unit tests using GoogleTest in a clean Docker environment. This command automatically builds the test image if it doesn't exist, then executes all tests in an isolated container.
+## 🎮 Features
 
-#### Test Commands
+1.  **Interactive Drawing**: Draw polygons directly on the HTML5 Canvas.
+2.  **Dual Mode Processing**: Toggle between "Backend" (API) and "WASM" (Client) to compare performance.
+3.  **Visual Feedback**: Real-time rendering of triangulated meshes.
+4.  **File Import**: Upload JSON polygon definitions:
 
-- **`make test`** - Run tests (builds test image if not exists) - Fast for repeated runs
+- Example:
 
-## Using the Application
+```json
+[
+  [100, 100],
+  [200, 100],
+  [200, 200],
+  [100, 200]
+]
+```
 
-### 1. Interactive Drawing
+## 📄 License
 
-1. Open the frontend in your browser
-2. Click on the left canvas to draw a polygon
-3. Complete the polygon by clicking near the first point
-4. Click "Triangulate" buttons to see the result
+This project is available under the MIT License.
 
-### 2. File Upload
+---
 
-1. Click "Choose File" and select a JSON file
-2. File format: `[[x1, y1], [x2, y2], [x3, y3], ...]`
-3. Example:
-   ```json
-   [
-     [100, 100],
-     [200, 100],
-     [200, 200],
-     [100, 200]
-   ]
-   ```
-
-### 3. Triangulation Options
-
-- **Backend**: Uses the C++ microservice (network call)
-- **WASM**: Uses client-side WebAssembly (faster, offline capable)
-
-## License
-
-This project is created for evaluation purposes. See individual component READMEs for specific licensing information.
-
-## Author
-
-**Jesús Izquierdo**
-
-- **LinkedIn**: [linkedin.com/in/jesus-izquierdo-cubas/](https://www.linkedin.com/in/jesus-izquierdo-cubas/)
-- **GitHub**: [github.com/jesusizq](https://github.com/jesusizq)
+**Author**: Jesús Izquierdo [Website](https://jesusizquierdo.dev) |
+[LinkedIn](https://www.linkedin.com/in/jesus-izquierdo-cubas/) | [GitHub](https://github.com/jesusizq)

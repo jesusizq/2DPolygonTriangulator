@@ -33,6 +33,12 @@ endif
 .PHONY: help build up down clean logs exec test build-test test-rebuild health status dev-up init-submodules install-deps build-wasm
 
 help:
+	@echo "3D Processor - Development Commands"
+	@echo "===================================="
+	@echo ""
+	@echo "Quick Start:"
+	@echo "  make build && make up : Build and start all services"
+	@echo ""
 	@echo "Available Commands:"
 	@echo "  build [env=<env>]  : Build all Docker images (default: development)"
 	@echo "  up [env=<env>]     : Start all services (default: development)"
