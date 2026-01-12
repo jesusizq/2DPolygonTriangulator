@@ -89,16 +89,33 @@ if [ -z "$COMMAND" ]; then
 fi
 
 # Set ENV_FILE based on environment
-ENV_FILE="config/env.$ENV"
-if [ ! -f "$ENV_FILE" ]; then
-    echo "ERROR: Environment file $ENV_FILE not found"
-    echo "Available environments: development, production, test"
+ENV_FILES_ARGS=""
+# Check for base .env in root or current dir
+if [ -f "../.env" ]; then
+    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file ../.env"
+elif [ -f ".env" ]; then
+    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file .env"
+fi
+
+# Check for specific environment file in root or current dir
+if [ -f "../.env.$ENV" ]; then
+    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file ../.env.$ENV"
+elif [ -f ".env.$ENV" ]; then
+    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file .env.$ENV"
+fi
+
+if [ -z "$ENV_FILES_ARGS" ]; then
+    echo "ERROR: No environment files found (.env or .env.$ENV)"
     exit 1
 fi
 
 # Docker Compose configuration
 COMPOSE_FILE="docker-compose.yml"
-COMPOSE_CMD="docker compose -f $COMPOSE_FILE --env-file $ENV_FILE"
+COMPOSE_CMD="docker compose -f $COMPOSE_FILE $ENV_FILES_ARGS"
+
+if [ "$ENV" = "production" ]; then
+    COMPOSE_CMD="docker compose -f $COMPOSE_FILE -f docker-compose.override.yml $ENV_FILES_ARGS"
+fi
 
 echo "=== 3D Processor - Environment: $ENV ==="
 

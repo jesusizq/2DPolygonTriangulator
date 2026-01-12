@@ -19,7 +19,8 @@ This project demonstrates production-grade C++ development:
 - **WebAssembly Optimization**: Shared C++ core library compiled with **Emscripten/embind** for zero-copy JS interop and offline capability.
 - **High-Performance Algorithms**: Implements the ear-clipping algorithm (via `mapbox/earcut.hpp`) for O(n) triangulation.
 - **Scalable Microservice**: Stateless API design using `cpp-httplib`, containerized with multi-stage Docker builds.
-- **DevOps & Quality**: Automated testing via GoogleTest, structured logging (`spdlog`), and environment-based configuration.
+- **Production-Ready Gateway**: Cloud-native deployment architecture using **Caddy** for automatic SSL (HTTPS) and **Nginx** for optimized frontend delivery.
+- **DevOps & Quality**: Automated testing via GoogleTest, network isolation via Docker networks, and environment-based configuration.
 
 ## 🏗️ Architecture
 
@@ -53,8 +54,29 @@ graph TD
 | **Frontend**       | WebGL, JavaScript (ES6)       | Interactive visualization & rendering |
 | **Compute**        | **WebAssembly**, Emscripten   | Client-side heavy lifting             |
 | **Algorithm**      | mapbox/earcut.hpp             | Efficient polygon processing          |
-| **Infrastructure** | **Docker**, Docker Compose    | Containerization & orchestration      |
+| **Infrastructure** | **Docker**, Caddy, Nginx      | Containerization & Reverse Proxy      |
 | **Testing**        | GoogleTest (GTest)            | Unit testing & verification           |
+
+## 🔧 Prerequisites
+
+Before running the project, ensure you have the following dependencies installed:
+
+### Required Dependencies
+
+- **Git** → For cloning repository and submodules
+- **CMake** → Required by emcmake for WASM compilation
+- **Node.js + npm** → For frontend JavaScript/WASM build process
+- **Docker + Docker Compose** → For building and running containers
+- **Emscripten SDK (emsdk)** → For compiling the triangulation library to WebAssembly. Install it following the [official guide](https://emscripten.org/docs/getting_started/downloads.html) or:
+
+```bash
+git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
+cd ~/emsdk
+./emsdk install latest
+./emsdk activate latest
+echo "source ~/emsdk/emsdk_env.sh" >> ~/.bashrc
+source ~/.bashrc
+```
 
 ## ⚡ Quick Start
 
@@ -69,10 +91,16 @@ cd 2DPolygonTriangulator
 make build && make up
 ```
 
-Access the application:
+Access the application (Production/VPS):
 
-- **Frontend**: [http://localhost:3000](http://localhost:3000)
-- **API Health**: [http://localhost:8080/health](http://localhost:8080/health)
+- **URL**: `https://your-domain.com` (Auto-SSL via Caddy)
+
+For local development:
+
+- **Frontend**: [http://localhost](http://localhost)
+- **API Health**: [http://localhost/api/health](http://localhost/api/health)
+
+> **Note on Local HTTPS**: When accessing via `https://localhost`, your browser will show a security warning. This is **expected** because Caddy generates a self-signed certificate for local development. In a production environment with a real domain, Caddy automatically provisions valid certificates via Let's Encrypt.
 
 ## 🧪 Testing
 

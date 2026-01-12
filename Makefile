@@ -6,8 +6,6 @@ SHELL := /bin/bash
 # Project configuration
 PROJECT_NAME := 3d-processor
 COMPOSE_COMMAND := docker compose -f docker/docker-compose.yml
-MESH_PROCESSOR_PORT := 8080
-FRONTEND_PORT := 3000
 
 # Variable for service target, can be overridden
 service ?= all
@@ -15,19 +13,35 @@ service ?= all
 # Environment selection (dev, prod, test)
 env ?= development
 
-# Check if .env exists, otherwise use environment-specific files
-ifeq ($(wildcard .env),)
-    # .env doesn't exist, use environment-specific files
-    ifeq ($(env),production)
-        ENV_FILE_ARG := --env-file .env.production
-    else ifeq ($(env),test)
-        ENV_FILE_ARG := --env-file .env.test
-    else
-        ENV_FILE_ARG := --env-file .env.development
-    endif
+# Determine environment files to use
+ENV_FILES :=
+ifeq ($(env),production)
+    SPECIFIC_ENV := .env.production
+else ifeq ($(env),test)
+    SPECIFIC_ENV := .env.test
 else
-    # .env exists, use it
-    ENV_FILE_ARG := --env-file .env
+    SPECIFIC_ENV := .env.development
+endif
+
+# Load .env if it exists
+ifneq ($(wildcard .env),)
+    ENV_FILES += --env-file .env
+    include .env
+    export
+endif
+
+# Load specific env file if it exists (overriding .env)
+ifneq ($(wildcard $(SPECIFIC_ENV)),)
+    ENV_FILES += --env-file $(SPECIFIC_ENV)
+    include $(SPECIFIC_ENV)
+    export
+endif
+
+ENV_FILE_ARG := $(ENV_FILES)
+
+# Always include override for production environment
+ifeq ($(env),production)
+    COMPOSE_COMMAND := $(COMPOSE_COMMAND) -f docker/docker-compose.override.yml
 endif
 
 .PHONY: help build up down clean logs exec test build-test test-rebuild health status dev-up init-submodules install-deps build-wasm
@@ -91,14 +105,15 @@ up:
 	@echo "Starting services for environment: $(env)..."
 	$(COMPOSE_COMMAND) $(ENV_FILE_ARG) up -d --remove-orphans
 	@echo "✓ Services started"
-	@echo "Frontend available at: http://localhost:$(FRONTEND_PORT)"
-	@echo "Mesh Processor API at: http://localhost:$(MESH_PROCESSOR_PORT)"
+	@echo "Gateway (HTTP)  : http://localhost:$(GATEWAY_HTTP_PORT)"
+	@echo "Gateway (HTTPS) : https://localhost:$(GATEWAY_HTTPS_PORT)"
+	@echo "API Proxy       : http://localhost:$(GATEWAY_HTTP_PORT)/api/health"
 
 dev-up:
 	@echo "Starting services in development mode..."
 	$(COMPOSE_COMMAND) $(ENV_FILE_ARG) up -d --remove-orphans
 	@echo "✓ Development services started"
-	@echo "Frontend available at: http://localhost:$(FRONTEND_PORT)"
+	@echo "Gateway (HTTP)  : http://localhost:$(GATEWAY_HTTP_PORT)"
 
 down:
 	@echo "Stopping services for environment: $(env)..."
@@ -156,11 +171,11 @@ test-rebuild:
 
 health:
 	@echo "Checking service health..."
-	@echo "Mesh Processor:"
-	@curl -sf http://localhost:$(MESH_PROCESSOR_PORT)/health || echo "  Unhealthy"
+	@echo "Mesh Processor (via Gateway):"
+	@curl -sf http://localhost:$(GATEWAY_HTTP_PORT)/api/health || echo "  Unhealthy"
 	@echo ""
-	@echo "Frontend:"
-	@curl -sf http://localhost:$(FRONTEND_PORT)/ > /dev/null && echo "  ✓ Healthy" || echo " Unhealthy"
+	@echo "Frontend (via Gateway):"
+	@curl -sf http://localhost:$(GATEWAY_HTTP_PORT)/health && echo "  ✓ Healthy" || echo " Unhealthy"
 
 status:
 	@echo "Service Status:"

@@ -1,7 +1,6 @@
 # Docker
 # .env ommited for convenience
 .env.local
-docker-compose.override.yml
 
 # Build artifacts
 build/

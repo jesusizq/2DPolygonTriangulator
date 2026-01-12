@@ -1,0 +1,13 @@
+{
+    # Deactivate automatic SSL since we are behind a proxy with SSL
+    auto_https off
+}
+
+http://{$DOMAIN} {
+    # Proxy to the frontend
+    reverse_proxy frontend:80
+
+    log {
+        output file /var/log/caddy/access.log
+    }
+}
