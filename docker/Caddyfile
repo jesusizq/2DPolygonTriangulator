@@ -1,17 +1,17 @@
 {
-    # Deactivate automatic SSL since we are behind a proxy with SSL
+    # Deactivate automatic SSL since we are behind a proxy with SSL (Cloudflare + Host Nginx)
     auto_https off
 }
 
 http://{$DOMAIN} {
-    # Proxy to the frontend
+    # Proxy to the frontend Nginx
     reverse_proxy frontend:80
 
-    # Ensure correct MIME types for WASM and JS modules
+    # Security headers
     header {
-        # Enable HSTS
         Strict-Transport-Security "max-age=31536000;"
-        # Global CORS
+        X-XSS-Protection "1; mode=block"
+        X-Frame-Options "SAMEORIGIN"
         Access-Control-Allow-Origin "*"
     }
 
