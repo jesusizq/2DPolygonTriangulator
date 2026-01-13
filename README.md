@@ -11,6 +11,8 @@
 
 **A high-performance geometric processing system demonstrating a hybrid architecture: REST API (C++ Microservice) and Client-side (WebAssembly).**
 
+> **[🔥 See it live on my site!](https://triangulator.jesusizquierdo.dev)**
+
 ## 🚀 Engineering Highlights
 
 This project demonstrates production-grade C++ development:
