@@ -20,8 +20,9 @@ run_compose() {
 
 usage() {
     SCRIPT_NAME=$(basename "$0")
-    echo "Usage: $SCRIPT_NAME [-n <service>] [-e <env>] [-d] [-c] [up|up-and-force|build|down|down-and-remove|stop|purge|stop-and-remove|logs|health|--help]"
+    echo "Usage: $SCRIPT_NAME [-n <service>] [-e <env>] [-d] [-c] [up|build-and-up|up-and-force|build|down|down-and-remove|stop|purge|stop-and-remove|logs|health|--help]"
     echo "  up              - Starts all services or specified service"
+    echo "  build-and-up    - Builds images and, only if the build succeeds, starts services"
     echo "  up-and-force    - Force recreate and start services"
     echo "  build           - Builds images without starting containers"
     echo "  down            - Stops services"
@@ -162,6 +163,22 @@ case "$COMMAND" in
                 echo "Mesh Processor API at: http://localhost:${MESH_PROCESSOR_PORT}"
             fi
         fi
+        ;;
+    build-and-up)
+        # Construye y arranca. A diferencia de up-and-force, no recrea los
+        # contenedores que no lo necesiten. run_compose aborta si el build
+        # falla, así que nunca se arranca sobre una imagen a medias.
+        echo "Building images..."
+        if [ -n "$SERVICE" ]; then
+            run_compose $COMPOSE_CMD build $NO_CACHE $SERVICE
+            echo "Starting services..."
+            run_compose $COMPOSE_CMD up $DETACHED_MODE $SERVICE
+        else
+            run_compose $COMPOSE_CMD build $NO_CACHE --parallel
+            echo "Starting services..."
+            run_compose $COMPOSE_CMD up $DETACHED_MODE --remove-orphans
+        fi
+        echo "✓ Images built and services started"
         ;;
     up-and-force)
         echo "Building images..."
