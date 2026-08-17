@@ -1,5 +1,23 @@
 #!/bin/bash
 
+# Todas las rutas se anclan al directorio del script, no al directorio desde el
+# que se lanza. Antes el compose file era relativo al cwd, así que el script
+# solo funcionaba ejecutándolo desde docker/: desde la raíz del repo, docker
+# compose no encontraba el fichero y fallaba con "no such file or directory".
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Ejecuta un comando y aborta si falla. Sin esto, el script imprimía su "✓" de
+# éxito pasara lo que pasara: un despliegue fallido se veía igual que uno bueno.
+run_compose() {
+    "$@"
+    local rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "ERROR: docker compose falló (código $rc). La operación NO se ha completado." >&2
+        exit "$rc"
+    fi
+}
+
 usage() {
     SCRIPT_NAME=$(basename "$0")
     echo "Usage: $SCRIPT_NAME [-n <service>] [-e <env>] [-d] [-c] [up|up-and-force|build|down|down-and-remove|stop|purge|stop-and-remove|logs|health|--help]"
@@ -90,18 +108,18 @@ fi
 
 # Set ENV_FILE based on environment
 ENV_FILES_ARGS=""
-# Check for base .env in root or current dir
-if [ -f "../.env" ]; then
-    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file ../.env"
-elif [ -f ".env" ]; then
-    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file .env"
+# Check for base .env in repo root or docker dir
+if [ -f "$REPO_ROOT/.env" ]; then
+    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file $REPO_ROOT/.env"
+elif [ -f "$SCRIPT_DIR/.env" ]; then
+    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file $SCRIPT_DIR/.env"
 fi
 
-# Check for specific environment file in root or current dir
-if [ -f "../.env.$ENV" ]; then
-    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file ../.env.$ENV"
-elif [ -f ".env.$ENV" ]; then
-    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file .env.$ENV"
+# Check for specific environment file in repo root or docker dir
+if [ -f "$REPO_ROOT/.env.$ENV" ]; then
+    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file $REPO_ROOT/.env.$ENV"
+elif [ -f "$SCRIPT_DIR/.env.$ENV" ]; then
+    ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file $SCRIPT_DIR/.env.$ENV"
 fi
 
 if [ -z "$ENV_FILES_ARGS" ]; then
@@ -110,11 +128,13 @@ if [ -z "$ENV_FILES_ARGS" ]; then
 fi
 
 # Docker Compose configuration
-COMPOSE_FILE="docker-compose.yml"
+# Rutas absolutas: los build.context del compose (../frontend, ../mesh-processor)
+# se resuelven respecto al fichero compose, así que siguen apuntando a lo mismo.
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 COMPOSE_CMD="docker compose -f $COMPOSE_FILE $ENV_FILES_ARGS"
 
 if [ "$ENV" = "production" ]; then
-    COMPOSE_CMD="docker compose -f $COMPOSE_FILE -f docker-compose.override.yml $ENV_FILES_ARGS"
+    COMPOSE_CMD="docker compose -f $COMPOSE_FILE -f $SCRIPT_DIR/docker-compose.override.yml $ENV_FILES_ARGS"
 fi
 
 echo "=== 3D Processor - Environment: $ENV ==="
@@ -124,47 +144,54 @@ case "$COMMAND" in
     up)
         echo "Starting services..."
         if [ -n "$SERVICE" ]; then
-            $COMPOSE_CMD up $DETACHED_MODE $SERVICE
+            run_compose $COMPOSE_CMD up $DETACHED_MODE $SERVICE
         else
-            $COMPOSE_CMD up $DETACHED_MODE --remove-orphans
+            run_compose $COMPOSE_CMD up $DETACHED_MODE --remove-orphans
         fi
         if [ -z "$DETACHED_MODE" ]; then
             echo "✓ Services running. Press Ctrl+C to stop."
         else
             echo "✓ Services started in detached mode"
-            echo "Frontend available at: http://localhost:$(FRONTEND_PORT)"
-            echo "Mesh Processor API at: http://localhost:$(MESH_PROCESSOR_PORT)"
+            if [ "$ENV" = "production" ]; then
+                # En producción solo el gateway publica puertos (ver
+                # docker-compose.override.yml); frontend y mesh-processor son
+                # `expose`, así que las URLs de desarrollo no aplican.
+                echo "Comprueba el estado con: docker ps"
+            else
+                echo "Frontend available at: http://localhost:${FRONTEND_PORT}"
+                echo "Mesh Processor API at: http://localhost:${MESH_PROCESSOR_PORT}"
+            fi
         fi
         ;;
     up-and-force)
         echo "Building images..."
         if [ -n "$SERVICE" ]; then
-            $COMPOSE_CMD build $NO_CACHE $SERVICE
+            run_compose $COMPOSE_CMD build $NO_CACHE $SERVICE
             echo "Starting service with --force-recreate..."
-            $COMPOSE_CMD up $DETACHED_MODE --force-recreate $SERVICE
+            run_compose $COMPOSE_CMD up $DETACHED_MODE --force-recreate $SERVICE
         else
-            $COMPOSE_CMD build $NO_CACHE --parallel
+            run_compose $COMPOSE_CMD build $NO_CACHE --parallel
             echo "Starting services with --force-recreate..."
-            $COMPOSE_CMD up $DETACHED_MODE --force-recreate --remove-orphans
+            run_compose $COMPOSE_CMD up $DETACHED_MODE --force-recreate --remove-orphans
         fi
         ;;
     build)
         echo "Building images..."
         if [ -n "$SERVICE" ]; then
-            $COMPOSE_CMD build $NO_CACHE $SERVICE
+            run_compose $COMPOSE_CMD build $NO_CACHE $SERVICE
         else
-            $COMPOSE_CMD build $NO_CACHE --parallel
+            run_compose $COMPOSE_CMD build $NO_CACHE --parallel
         fi
         echo "✓ Build completed"
         ;;
     down)
         echo "Stopping services..."
-        $COMPOSE_CMD down
+        run_compose $COMPOSE_CMD down
         echo "✓ Services stopped"
         ;;
     down-and-remove)
         echo "Stopping and removing all resources..."
-        $COMPOSE_CMD down -v --rmi all --remove-orphans
+        run_compose $COMPOSE_CMD down -v --rmi all --remove-orphans
         echo "✓ All resources removed"
         ;;
     stop)
@@ -173,7 +200,7 @@ case "$COMMAND" in
             usage
         fi
         echo "Stopping service: $SERVICE"
-        $COMPOSE_CMD stop "$SERVICE"
+        run_compose $COMPOSE_CMD stop "$SERVICE"
         echo "✓ Service $SERVICE stopped"
         ;;
     purge)
@@ -194,8 +221,8 @@ case "$COMMAND" in
             usage
         fi
         echo "Stopping and removing service: $SERVICE"
-        $COMPOSE_CMD stop "$SERVICE" && \
-        $COMPOSE_CMD rm -f "$SERVICE"
+        run_compose $COMPOSE_CMD stop "$SERVICE"
+        run_compose $COMPOSE_CMD rm -f "$SERVICE"
         echo "✓ Service $SERVICE stopped and removed"
         ;;
     logs)
