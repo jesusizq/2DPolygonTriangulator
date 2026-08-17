@@ -53,6 +53,12 @@ services:
       mesh-processor:
         condition: service_healthy
     healthcheck:
+      # 127.0.0.1 y no localhost: dentro del contenedor localhost resuelve
+      # también a ::1, el wget de BusyBox intenta esa primero y nginx solo hace
+      # `listen 80` (IPv4), así que el check fallaba siempre con "Connection
+      # refused" aunque el sitio sirviera bien. curl reintenta con la otra
+      # familia de direcciones (de ahí que mesh-processor sí saliera healthy);
+      # wget no.
       test:
         [
           "CMD",
@@ -60,7 +66,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost/health",
+          "http://127.0.0.1/health",
         ]
       interval: 30s
       timeout: 10s
