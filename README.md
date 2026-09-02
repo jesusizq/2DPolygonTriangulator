@@ -89,18 +89,34 @@ Run the entire system with one command. The build process automatically handles 
 git clone --recursive <repository-url>
 cd 2DPolygonTriangulator
 
-# Build and start services
+# Build and start services (development profile)
 make build && make up
 ```
-
-Access the application (Production/VPS):
-
-- **URL**: `https://your-domain.com` (Auto-SSL via Caddy)
 
 For local development:
 
 - **Frontend**: [http://localhost](http://localhost)
 - **API Health**: [http://localhost/api/health](http://localhost/api/health)
+
+### Choosing a profile
+
+Every profile has its own `.env.<profile>` and publishes the gateway on a different address and port, so deploying with the wrong one fights whatever already owns those ports:
+
+```bash
+make up env=production            # or: ./docker/run.sh -d -e production up
+```
+
+A host that always deploys the same profile can pin it once in a git-ignored `.deploy-env` file at the repo root, and then drop the flag:
+
+```bash
+echo production > .deploy-env
+```
+
+`run.sh` prints the resolved profile, where it came from, and the ports the gateway is about to claim before starting anything.
+
+Access the application (Production):
+
+- **URL**: `https://your-domain.com` (Auto-SSL via Caddy)
 
 > **Note on Local HTTPS**: When accessing via `https://localhost`, your browser will show a security warning. This is **expected** because Caddy generates a self-signed certificate for local development. In a production environment with a real domain, Caddy automatically provisions valid certificates via Let's Encrypt.
 

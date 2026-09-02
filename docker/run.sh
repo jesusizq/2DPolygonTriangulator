@@ -36,7 +36,8 @@ usage() {
     echo ""
     echo "Options:"
     echo "  -n <service>    - Target specific service (mesh-processor, frontend)"
-    echo "  -e <env>        - Environment: development, production, or test (defaults to development)"
+    echo "  -e <env>        - Environment: development, production, or test"
+    echo "                    (default: .deploy-env contents if present, else development)"
     echo "  -d              - Run in detached mode (only for up and up-and-force)"
     echo "  -c              - Build images with --no-cache (only for up, up-and-force, and build)"
     echo ""
@@ -52,7 +53,7 @@ usage() {
 
 # Initialize variables
 SERVICE=""
-ENV="development"
+ENV=""
 DETACHED_MODE=""
 NO_CACHE=""
 COMMAND=""
@@ -107,20 +108,46 @@ if [ -z "$COMMAND" ]; then
     usage
 fi
 
+# Each profile publishes the gateway on different ports, so a host can pin its
+# own default in .deploy-env instead of relying on everyone passing -e.
+DEPLOY_ENV_FILE="$REPO_ROOT/.deploy-env"
+if [ -n "$ENV" ]; then
+    ENV_SOURCE="-e"
+elif [ -f "$DEPLOY_ENV_FILE" ]; then
+    ENV=$(tr -d '[:space:]' < "$DEPLOY_ENV_FILE")
+    ENV_SOURCE=".deploy-env"
+    case "$ENV" in
+        development|production|test) ;;
+        *)
+            echo "ERROR: Invalid environment in $DEPLOY_ENV_FILE: '$ENV'." >&2
+            echo "       Must be development, production, or test" >&2
+            exit 1
+            ;;
+    esac
+else
+    ENV="development"
+    ENV_SOURCE="default"
+fi
+
 # Set ENV_FILE based on environment
 ENV_FILES_ARGS=""
+ENV_FILE_PATHS=()
 # Check for base .env in repo root or docker dir
 if [ -f "$REPO_ROOT/.env" ]; then
     ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file $REPO_ROOT/.env"
+    ENV_FILE_PATHS+=("$REPO_ROOT/.env")
 elif [ -f "$SCRIPT_DIR/.env" ]; then
     ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file $SCRIPT_DIR/.env"
+    ENV_FILE_PATHS+=("$SCRIPT_DIR/.env")
 fi
 
 # Check for specific environment file in repo root or docker dir
 if [ -f "$REPO_ROOT/.env.$ENV" ]; then
     ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file $REPO_ROOT/.env.$ENV"
+    ENV_FILE_PATHS+=("$REPO_ROOT/.env.$ENV")
 elif [ -f "$SCRIPT_DIR/.env.$ENV" ]; then
     ENV_FILES_ARGS="$ENV_FILES_ARGS --env-file $SCRIPT_DIR/.env.$ENV"
+    ENV_FILE_PATHS+=("$SCRIPT_DIR/.env.$ENV")
 fi
 
 if [ -z "$ENV_FILES_ARGS" ]; then
@@ -138,7 +165,19 @@ if [ "$ENV" = "production" ]; then
     COMPOSE_CMD="docker compose -f $COMPOSE_FILE -f $SCRIPT_DIR/docker-compose.override.yml $ENV_FILES_ARGS"
 fi
 
-echo "=== 3D Processor - Environment: $ENV ==="
+gateway_binding() {
+    (
+        set -a
+        for env_file in "${ENV_FILE_PATHS[@]}"; do
+            . "$env_file"
+        done
+        set +a
+        echo "${GATEWAY_HTTP_BIND:-0.0.0.0}:${GATEWAY_HTTP_PORT:-80} (HTTP), ${GATEWAY_HTTPS_BIND:-0.0.0.0}:${GATEWAY_HTTPS_PORT:-443} (HTTPS)"
+    )
+}
+
+echo "=== 3D Processor - Environment: $ENV ($ENV_SOURCE) ==="
+echo "Gateway will publish on: $(gateway_binding)"
 
 # Validate and run the command
 case "$COMMAND" in

@@ -10,8 +10,10 @@ COMPOSE_COMMAND := docker compose -f docker/docker-compose.yml
 # Variable for service target, can be overridden
 service ?= all
 
-# Environment selection (dev, prod, test)
-env ?= development
+# Environment selection (dev, prod, test), defaulting to the host's own
+# .deploy-env when it pins one (same mechanism as docker/run.sh)
+DEPLOY_ENV := $(strip $(shell cat .deploy-env 2>/dev/null))
+env ?= $(if $(DEPLOY_ENV),$(DEPLOY_ENV),development)
 
 # Determine environment files to use
 ENV_FILES :=
