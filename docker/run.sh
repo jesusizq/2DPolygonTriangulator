@@ -176,6 +176,22 @@ gateway_binding() {
     )
 }
 
+# Las imágenes salen de los submódulos, y un `git pull` del repo mueve su puntero
+# pero no su árbol: en producción se construye el commit que el repo fija, no el
+# que hubiera en el disco. En desarrollo se respeta el trabajo en curso.
+build_images() {
+    if [ "$ENV" = "production" ]; then
+        git -C "$REPO_ROOT" submodule update --init --recursive \
+            || { echo "✗ No se pudieron sincronizar los submódulos."; exit 1; }
+    fi
+    echo "Building images..."
+    if [ -n "$SERVICE" ]; then
+        run_compose $COMPOSE_CMD build $NO_CACHE $SERVICE
+    else
+        run_compose $COMPOSE_CMD build $NO_CACHE --parallel
+    fi
+}
+
 echo "=== 3D Processor - Environment: $ENV ($ENV_SOURCE) ==="
 echo "Gateway will publish on: $(gateway_binding)"
 
@@ -207,37 +223,26 @@ case "$COMMAND" in
         # Construye y arranca. A diferencia de up-and-force, no recrea los
         # contenedores que no lo necesiten. run_compose aborta si el build
         # falla, así que nunca se arranca sobre una imagen a medias.
-        echo "Building images..."
+        build_images
+        echo "Starting services..."
         if [ -n "$SERVICE" ]; then
-            run_compose $COMPOSE_CMD build $NO_CACHE $SERVICE
-            echo "Starting services..."
             run_compose $COMPOSE_CMD up $DETACHED_MODE $SERVICE
         else
-            run_compose $COMPOSE_CMD build $NO_CACHE --parallel
-            echo "Starting services..."
             run_compose $COMPOSE_CMD up $DETACHED_MODE --remove-orphans
         fi
         echo "✓ Images built and services started"
         ;;
     up-and-force)
-        echo "Building images..."
+        build_images
+        echo "Starting with --force-recreate..."
         if [ -n "$SERVICE" ]; then
-            run_compose $COMPOSE_CMD build $NO_CACHE $SERVICE
-            echo "Starting service with --force-recreate..."
             run_compose $COMPOSE_CMD up $DETACHED_MODE --force-recreate $SERVICE
         else
-            run_compose $COMPOSE_CMD build $NO_CACHE --parallel
-            echo "Starting services with --force-recreate..."
             run_compose $COMPOSE_CMD up $DETACHED_MODE --force-recreate --remove-orphans
         fi
         ;;
     build)
-        echo "Building images..."
-        if [ -n "$SERVICE" ]; then
-            run_compose $COMPOSE_CMD build $NO_CACHE $SERVICE
-        else
-            run_compose $COMPOSE_CMD build $NO_CACHE --parallel
-        fi
+        build_images
         echo "✓ Build completed"
         ;;
     down)
